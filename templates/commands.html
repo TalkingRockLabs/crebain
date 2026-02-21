@@ -1,0 +1,369 @@
+{% extends "base.html" %}
+
+{% block title %}Commands - {{ node['node_id'] }} - Crebain Portal{% endblock %}
+
+{% block content %}
+<nav class="navbar navbar-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="/">
+            <img src="/static/images/crebain_logo.png" alt="Crebain" height="30" class="me-2">Crebain
+        </a>
+        <span class="navbar-text">
+            Command Management
+        </span>
+    </div>
+</nav>
+
+<div class="container-fluid mt-4">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/" style="color: #6c757d;">Home</a></li>
+            <li class="breadcrumb-item"><a href="/node/{{ node['node_id'] }}" style="color: #6c757d;">{{ node['node_id'] }}</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Commands</li>
+        </ol>
+    </nav>
+
+    <!-- Navigation Tabs -->
+    <div class="mb-4">
+        <a href="/node/{{ node['node_id'] }}" class="btn btn-outline-secondary me-2">
+            <i class="fas fa-info-circle"></i> Details
+        </a>
+        <a href="/node/{{ node['node_id'] }}/commands" class="btn btn-primary me-2">
+            <i class="fas fa-terminal"></i> Commands
+        </a>
+        <a href="/node/{{ node['node_id'] }}/files" class="btn btn-outline-secondary me-2">
+            <i class="fas fa-folder"></i> Files
+        </a>
+        <a href="/node/{{ node['node_id'] }}/logs" class="btn btn-outline-secondary me-2">
+            <i class="fas fa-list"></i> Logs
+        </a>
+        <a href="/node/{{ node['node_id'] }}/proxy" class="btn btn-outline-secondary">
+            <i class="fas fa-network-wired"></i> Proxy
+        </a>
+    </div>
+
+    <!-- Command Submission Form -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-terminal"></i> Execute Command</h5>
+        </div>
+        <div class="card-body">
+            <form id="commandForm">
+                <div class="mb-3">
+                    <label for="commandInput" class="form-label">Command</label>
+                    <input type="text" class="form-control bg-dark text-light border-secondary"
+                           id="commandInput" placeholder="e.g., whoami, ifconfig, cat /etc/hostname"
+                           autocomplete="off">
+                    <div class="form-text text-muted-custom">
+                        Enter a shell command to execute on {{ node['node_id'] }}
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label for="timeoutInput" class="form-label">Timeout (seconds)</label>
+                    <input type="number" class="form-control bg-dark text-light border-secondary"
+                           id="timeoutInput" value="300" min="1" max="3600"
+                           autocomplete="off">
+                    <div class="form-text text-muted-custom">
+                        Maximum time to wait for command completion (1-3600 seconds)
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-paper-plane"></i> Submit Command
+                </button>
+            </form>
+            <div id="submitMessage" class="mt-3" style="display: none;"></div>
+        </div>
+    </div>
+
+    <!-- Command History -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-history"></i> Command History</h5>
+            <button class="btn btn-sm btn-outline-secondary" onclick="location.reload()">
+                <i class="fas fa-sync-alt"></i> Refresh
+            </button>
+        </div>
+        <div class="card-body">
+            {% if commands %}
+                <div class="accordion" id="commandsAccordion">
+                    {% for cmd in commands %}
+                    <div class="accordion-item bg-dark-custom mb-2">
+                        <h2 class="accordion-header" id="heading{{ cmd['id'] }}">
+                            <button class="accordion-button collapsed" type="button"
+                                    data-bs-toggle="collapse" data-bs-target="#collapse{{ cmd['id'] }}">
+                                <div class="w-100">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <strong>{{ cmd['command'] }}</strong>
+                                            {% if cmd['status'] == 'completed' %}
+                                                {% if cmd['exit_code'] == 0 %}
+                                                    <span class="badge bg-success ms-2">Success</span>
+                                                {% else %}
+                                                    <span class="badge bg-danger ms-2">Failed (exit {{ cmd['exit_code'] }})</span>
+                                                {% endif %}
+                                            {% elif cmd['status'] == 'sent' %}
+                                                <span class="badge bg-info ms-2">Executing...</span>
+                                            {% elif cmd['status'] == 'pending' %}
+                                                <span class="badge bg-warning ms-2">Pending</span>
+                                            {% elif cmd['status'] == 'failed' %}
+                                                <span class="badge bg-danger ms-2">Failed</span>
+                                            {% endif %}
+                                        </div>
+                                        <small class="text-muted-custom">
+                                            {{ cmd['created_at'] }}
+                                            {% if cmd['execution_time'] %}
+                                                ({{ "%.2f"|format(cmd['execution_time']) }}s)
+                                            {% endif %}
+                                        </small>
+                                    </div>
+                                </div>
+                            </button>
+                        </h2>
+                        <div id="collapse{{ cmd['id'] }}" class="accordion-collapse collapse"
+                             data-bs-parent="#commandsAccordion">
+                            <div class="accordion-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <p class="mb-1"><strong>Command ID:</strong> {{ cmd['id'] }}</p>
+                                        <p class="mb-1"><strong>Status:</strong> {{ cmd['status'] }}</p>
+                                        <p class="mb-1"><strong>Created:</strong> {{ cmd['created_at'] }}</p>
+                                        {% if cmd['sent_at'] %}
+                                        <p class="mb-1"><strong>Sent:</strong> {{ cmd['sent_at'] }}</p>
+                                        {% endif %}
+                                        {% if cmd['completed_at'] %}
+                                        <p class="mb-1"><strong>Completed:</strong> {{ cmd['completed_at'] }}</p>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-6">
+                                        {% if cmd['exit_code'] is not none %}
+                                        <p class="mb-1"><strong>Exit Code:</strong> {{ cmd['exit_code'] }}</p>
+                                        {% endif %}
+                                        {% if cmd['execution_time'] %}
+                                        <p class="mb-1"><strong>Execution Time:</strong> {{ "%.3f"|format(cmd['execution_time']) }}s</p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                {% if cmd['stdout'] %}
+                                <div class="mt-3">
+                                    <h6>Standard Output:</h6>
+                                    <pre class="json-preview">{{ cmd['stdout'] }}</pre>
+                                </div>
+                                {% endif %}
+
+                                {% if cmd['stderr'] %}
+                                <div class="mt-3">
+                                    <h6 class="text-danger">Standard Error:</h6>
+                                    <pre class="json-preview text-danger">{{ cmd['stderr'] }}</pre>
+                                </div>
+                                {% endif %}
+
+                                {% if cmd['error'] %}
+                                <div class="mt-3">
+                                    <h6 class="text-danger">Error:</h6>
+                                    <pre class="json-preview text-danger">{{ cmd['error'] }}</pre>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="text-muted-custom text-center py-4">
+                    <i class="fas fa-inbox fa-3x mb-3 d-block"></i>
+                    No commands have been executed yet.
+                </p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('commandForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const commandInput = document.getElementById('commandInput');
+    const timeoutInput = document.getElementById('timeoutInput');
+    const command = commandInput.value.trim();
+    const timeout = timeoutInput.value;
+    const messageDiv = document.getElementById('submitMessage');
+
+    if (!command) {
+        messageDiv.className = 'alert alert-warning mt-3';
+        messageDiv.textContent = 'Please enter a command';
+        messageDiv.style.display = 'block';
+        return;
+    }
+
+    try {
+        const response = await fetch('/node/{{ node["node_id"] }}/command/submit', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: 'command=' + encodeURIComponent(command) + '&timeout=' + encodeURIComponent(timeout)
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            messageDiv.className = 'alert alert-success mt-3';
+            messageDiv.textContent = result.message;
+            messageDiv.style.display = 'block';
+            commandInput.value = '';
+
+            // Reload page after 2 seconds to show the new command
+            setTimeout(() => location.reload(), 2000);
+        } else {
+            messageDiv.className = 'alert alert-danger mt-3';
+            messageDiv.textContent = 'Error: ' + result.error;
+            messageDiv.style.display = 'block';
+        }
+    } catch (error) {
+        messageDiv.className = 'alert alert-danger mt-3';
+        messageDiv.textContent = 'Error submitting command: ' + error.message;
+        messageDiv.style.display = 'block';
+    }
+});
+
+// Auto-refresh every 10 seconds to check for command results using AJAX (no page reload)
+async function updateCommandsList() {
+    try {
+        const response = await fetch('/node/{{ node["node_id"] }}/commands/list');
+        const data = await response.json();
+
+        if (data.success) {
+            updateCommandsAccordion(data.commands);
+        }
+    } catch (error) {
+        console.error('Error fetching commands:', error);
+    }
+}
+
+function updateCommandsAccordion(commands) {
+    const accordion = document.getElementById('commandsAccordion');
+    if (!accordion) return;
+
+    // Save currently expanded accordion items
+    const expandedItems = new Set();
+    document.querySelectorAll('.accordion-collapse.show').forEach(el => {
+        expandedItems.add(el.id);
+    });
+
+    // Save current scroll position
+    const scrollPos = window.scrollY;
+
+    // Clear existing accordion
+    accordion.innerHTML = '';
+
+    if (commands.length === 0) {
+        accordion.innerHTML = `
+            <p class="text-muted-custom text-center py-4">
+                <i class="fas fa-inbox fa-3x mb-3 d-block"></i>
+                No commands have been executed yet.
+            </p>
+        `;
+        return;
+    }
+
+    // Add updated accordion items
+    commands.forEach(cmd => {
+        const isExpanded = expandedItems.has('collapse' + cmd.id);
+
+        let statusBadge = '';
+        if (cmd.status === 'completed') {
+            if (cmd.exit_code === 0) {
+                statusBadge = '<span class="badge bg-success ms-2">Success</span>';
+            } else {
+                statusBadge = `<span class="badge bg-danger ms-2">Failed (exit ${cmd.exit_code})</span>`;
+            }
+        } else if (cmd.status === 'sent') {
+            statusBadge = '<span class="badge bg-info ms-2">Executing...</span>';
+        } else if (cmd.status === 'pending') {
+            statusBadge = '<span class="badge bg-warning ms-2">Pending</span>';
+        } else if (cmd.status === 'failed') {
+            statusBadge = '<span class="badge bg-danger ms-2">Failed</span>';
+        }
+
+        const executionTimeStr = cmd.execution_time ? ` (${cmd.execution_time.toFixed(2)}s)` : '';
+
+        const accordionItem = `
+            <div class="accordion-item bg-dark-custom mb-2">
+                <h2 class="accordion-header" id="heading${cmd.id}">
+                    <button class="accordion-button ${isExpanded ? '' : 'collapsed'}" type="button"
+                            data-bs-toggle="collapse" data-bs-target="#collapse${cmd.id}">
+                        <div class="w-100">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>${escapeHtml(cmd.command)}</strong>
+                                    ${statusBadge}
+                                </div>
+                                <small class="text-muted-custom">
+                                    ${cmd.created_at}${executionTimeStr}
+                                </small>
+                            </div>
+                        </div>
+                    </button>
+                </h2>
+                <div id="collapse${cmd.id}" class="accordion-collapse collapse ${isExpanded ? 'show' : ''}"
+                     data-bs-parent="#commandsAccordion">
+                    <div class="accordion-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p class="mb-1"><strong>Command ID:</strong> ${cmd.id}</p>
+                                <p class="mb-1"><strong>Status:</strong> ${cmd.status}</p>
+                                <p class="mb-1"><strong>Created:</strong> ${cmd.created_at}</p>
+                                ${cmd.sent_at ? `<p class="mb-1"><strong>Sent:</strong> ${cmd.sent_at}</p>` : ''}
+                                ${cmd.completed_at ? `<p class="mb-1"><strong>Completed:</strong> ${cmd.completed_at}</p>` : ''}
+                            </div>
+                            <div class="col-md-6">
+                                ${cmd.exit_code !== null && cmd.exit_code !== undefined ? `<p class="mb-1"><strong>Exit Code:</strong> ${cmd.exit_code}</p>` : ''}
+                                ${cmd.execution_time ? `<p class="mb-1"><strong>Execution Time:</strong> ${cmd.execution_time.toFixed(3)}s</p>` : ''}
+                            </div>
+                        </div>
+                        ${cmd.stdout ? `
+                        <div class="mt-3">
+                            <h6>Standard Output:</h6>
+                            <pre class="json-preview">${escapeHtml(cmd.stdout)}</pre>
+                        </div>` : ''}
+                        ${cmd.stderr ? `
+                        <div class="mt-3">
+                            <h6 class="text-danger">Standard Error:</h6>
+                            <pre class="json-preview text-danger">${escapeHtml(cmd.stderr)}</pre>
+                        </div>` : ''}
+                        ${cmd.error ? `
+                        <div class="mt-3">
+                            <h6 class="text-danger">Error:</h6>
+                            <pre class="json-preview text-danger">${escapeHtml(cmd.error)}</pre>
+                        </div>` : ''}
+                    </div>
+                </div>
+            </div>
+        `;
+
+        accordion.innerHTML += accordionItem;
+    });
+
+    // Restore scroll position
+    window.scrollTo(0, scrollPos);
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Auto-refresh every 10 seconds to check for command results (only if commands are pending/executing)
+setInterval(() => {
+    const hasPendingCommands = document.querySelector('.badge.bg-info, .badge.bg-warning');
+    if (hasPendingCommands) {
+        updateCommandsList();
+    }
+}, 10000);
+</script>
+
+{% endblock %}

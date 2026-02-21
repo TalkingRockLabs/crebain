@@ -1,0 +1,12 @@
+# Core dependencies for client and server
+RNS>=0.4.0
+psutil>=5.8.0
+
+# Optional dependencies
+gpsd-py3>=0.3.0  # Optional: For GPS data collection via GPSD. Falls back to placeholder coordinates if not available.
+
+# Web UI dependencies (server/web interface only)
+flask>=3.0.0
+flask-login>=0.6.0
+folium>=0.20.0
+pandas>=2.0.0

@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+
+{% block title %}Node {{ node.node_id }} - Crebain Portal{% endblock %}
+
+{% block content %}
+<nav class="navbar navbar-dark">
+    <div class="container-fluid">
+        <span class="navbar-brand mb-0 h1">
+            <img src="/static/images/crebain_logo.png" alt="Crebain" height="30" class="me-2">Node: {{ node.node_id }}
+        </span>
+    </div>
+</nav>
+
+<div class="container-fluid mt-4">
+    <div class="mb-4">
+        <a href="/" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+        </a>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="mb-4">
+        <a href="/node/{{ node.node_id }}" class="btn btn-primary me-2">
+            <i class="fas fa-info-circle"></i> Details
+        </a>
+        <a href="/node/{{ node.node_id }}/commands" class="btn btn-outline-secondary me-2">
+            <i class="fas fa-terminal"></i> Commands
+        </a>
+        <a href="/node/{{ node.node_id }}/files" class="btn btn-outline-secondary me-2">
+            <i class="fas fa-folder"></i> Files
+        </a>
+        <a href="/node/{{ node.node_id }}/logs" class="btn btn-outline-secondary me-2">
+            <i class="fas fa-list"></i> Logs
+        </a>
+        <a href="/node/{{ node.node_id }}/proxy" class="btn btn-outline-secondary">
+            <i class="fas fa-network-wired"></i> Proxy
+        </a>
+    </div>
+
+    <!-- Node Info Card -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="card-title mb-0">
+                <i class="fas fa-info-circle me-2"></i>Node Information
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="border-custom border rounded p-3 text-center">
+                        <div class="text-muted-custom small">Node ID</div>
+                        <div class="h5 mb-0">{{ node.node_id }}</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="border-custom border rounded p-3 text-center">
+                        <div class="text-muted-custom small">Last Seen</div>
+                        <div class="h6 mb-0">{{ node.last_seen }}</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="border-custom border rounded p-3 text-center">
+                        <div class="text-muted-custom small">Created</div>
+                        <div class="h6 mb-0">{{ node.created_at }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <h4 class="mb-4">
+        <i class="fas fa-history me-2"></i>Recent Status History (Last 3 Check-ins)
+    </h4>
+    
+    {% if history %}
+        {% for record in history[:3] %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-clock me-2"></i>
+                    Check-in {{ loop.index }} - {{ record.timestamp }}
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="accordion" id="accordion{{ loop.index }}">
+                    
+                    {% if record.gps %}
+                    <div class="accordion-item bg-dark-custom">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#gps{{ loop.index }}">
+                                <i class="fas fa-map-marker-alt me-2"></i>GPS Data
+                            </button>
+                        </h2>
+                        <div id="gps{{ loop.index }}" class="accordion-collapse collapse" data-bs-parent="#accordion{{ loop.index }}">
+                            <div class="accordion-body">
+                                <div class="json-preview">{{ record.gps|tojson(indent=2) }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if record.power %}
+                    <div class="accordion-item bg-dark-custom">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#power{{ loop.index }}">
+                                <i class="fas fa-battery-half me-2"></i>Power Data
+                            </button>
+                        </h2>
+                        <div id="power{{ loop.index }}" class="accordion-collapse collapse" data-bs-parent="#accordion{{ loop.index }}">
+                            <div class="accordion-body">
+                                <div class="json-preview">{{ record.power|tojson(indent=2) }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if record.system %}
+                    <div class="accordion-item bg-dark-custom">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#system{{ loop.index }}">
+                                <i class="fas fa-desktop me-2"></i>System Data
+                            </button>
+                        </h2>
+                        <div id="system{{ loop.index }}" class="accordion-collapse collapse" data-bs-parent="#accordion{{ loop.index }}">
+                            <div class="accordion-body">
+                                <div class="json-preview">{{ record.system|tojson(indent=2) }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if record.services %}
+                    <div class="accordion-item bg-dark-custom">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#services{{ loop.index }}">
+                                <i class="fas fa-cogs me-2"></i>Services
+                            </button>
+                        </h2>
+                        <div id="services{{ loop.index }}" class="accordion-collapse collapse" data-bs-parent="#accordion{{ loop.index }}">
+                            <div class="accordion-body">
+                                <div class="json-preview">{{ record.services|tojson(indent=2) }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if record.storage %}
+                    <div class="accordion-item bg-dark-custom">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#storage{{ loop.index }}">
+                                <i class="fas fa-hdd me-2"></i>Storage
+                            </button>
+                        </h2>
+                        <div id="storage{{ loop.index }}" class="accordion-collapse collapse" data-bs-parent="#accordion{{ loop.index }}">
+                            <div class="accordion-body">
+                                <div class="json-preview">{{ record.storage|tojson(indent=2) }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if record.network %}
+                    <div class="accordion-item bg-dark-custom">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#network{{ loop.index }}">
+                                <i class="fas fa-network-wired me-2"></i>Network
+                            </button>
+                        </h2>
+                        <div id="network{{ loop.index }}" class="accordion-collapse collapse" data-bs-parent="#accordion{{ loop.index }}">
+                            <div class="accordion-body">
+                                <div class="json-preview">{{ record.network|tojson(indent=2) }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if record.rns %}
+                    <div class="accordion-item bg-dark-custom">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#rns{{ loop.index }}">
+                                <i class="fas fa-broadcast-tower me-2"></i>RNS Status
+                            </button>
+                        </h2>
+                        <div id="rns{{ loop.index }}" class="accordion-collapse collapse" data-bs-parent="#accordion{{ loop.index }}">
+                            <div class="accordion-body">
+                                <div class="json-preview">{{ record.rns|tojson(indent=2) }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if record.users %}
+                    <div class="accordion-item bg-dark-custom">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#users{{ loop.index }}">
+                                <i class="fas fa-users me-2"></i>Users
+                            </button>
+                        </h2>
+                        <div id="users{{ loop.index }}" class="accordion-collapse collapse" data-bs-parent="#accordion{{ loop.index }}">
+                            <div class="accordion-body">
+                                <div class="json-preview">{{ record.users|tojson(indent=2) }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if record.client_config %}
+                    <div class="accordion-item bg-dark-custom">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#config{{ loop.index }}">
+                                <i class="fas fa-file-code me-2"></i>Client Configuration
+                            </button>
+                        </h2>
+                        <div id="config{{ loop.index }}" class="accordion-collapse collapse" data-bs-parent="#accordion{{ loop.index }}">
+                            <div class="accordion-body">
+                                <div class="mb-3">
+                                    <strong>Config File:</strong> 
+                                    <code class="bg-darker p-1 rounded">{{ record.client_config.config_file }}</code>
+                                </div>
+                                <div class="json-preview">{{ record.client_config.config_content }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+    <div class="card">
+        <div class="card-body text-center">
+            <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+            <h5>No Status History Found</h5>
+            <p class="text-muted-custom">No status history found for this node.</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

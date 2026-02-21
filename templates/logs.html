@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+
+{% block title %}Logs - {{ node['node_id'] }} - Crebain Portal{% endblock %}
+
+{% block content %}
+<nav class="navbar navbar-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="/">
+            <img src="/static/images/crebain_logo.png" alt="Crebain" height="30" class="me-2">Crebain
+        </a>
+        <span class="navbar-text">
+            System Logs
+        </span>
+    </div>
+</nav>
+
+<div class="container-fluid mt-4">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/" style="color: #6c757d;">Home</a></li>
+            <li class="breadcrumb-item"><a href="/node/{{ node['node_id'] }}" style="color: #6c757d;">{{ node['node_id'] }}</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Logs</li>
+        </ol>
+    </nav>
+
+    <!-- Navigation Tabs -->
+    <div class="mb-4">
+        <a href="/node/{{ node['node_id'] }}" class="btn btn-outline-secondary me-2">
+            <i class="fas fa-info-circle"></i> Details
+        </a>
+        <a href="/node/{{ node['node_id'] }}/commands" class="btn btn-outline-secondary me-2">
+            <i class="fas fa-terminal"></i> Commands
+        </a>
+        <a href="/node/{{ node['node_id'] }}/files" class="btn btn-outline-secondary me-2">
+            <i class="fas fa-folder"></i> Files
+        </a>
+        <a href="/node/{{ node['node_id'] }}/logs" class="btn btn-primary me-2">
+            <i class="fas fa-list"></i> Logs
+        </a>
+        <a href="/node/{{ node['node_id'] }}/proxy" class="btn btn-outline-secondary">
+            <i class="fas fa-network-wired"></i> Proxy
+        </a>
+    </div>
+
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-filter"></i> Filters</h5>
+        </div>
+        <div class="card-body">
+            <form method="GET" class="row g-3">
+                <div class="col-md-4">
+                    <label for="typeFilter" class="form-label">Log Type</label>
+                    <select class="form-select bg-dark text-light border-secondary" id="typeFilter" name="type">
+                        <option value="">All Types</option>
+                        <option value="command" {% if request.args.get('type') == 'command' %}selected{% endif %}>Command</option>
+                        <option value="file_transfer" {% if request.args.get('type') == 'file_transfer' %}selected{% endif %}>File Transfer</option>
+                        <option value="system" {% if request.args.get('type') == 'system' %}selected{% endif %}>System</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="levelFilter" class="form-label">Log Level</label>
+                    <select class="form-select bg-dark text-light border-secondary" id="levelFilter" name="level">
+                        <option value="">All Levels</option>
+                        <option value="INFO" {% if request.args.get('level') == 'INFO' %}selected{% endif %}>INFO</option>
+                        <option value="WARNING" {% if request.args.get('level') == 'WARNING' %}selected{% endif %}>WARNING</option>
+                        <option value="ERROR" {% if request.args.get('level') == 'ERROR' %}selected{% endif %}>ERROR</option>
+                    </select>
+                </div>
+                <div class="col-md-4 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary me-2">
+                        <i class="fas fa-search"></i> Apply Filters
+                    </button>
+                    <a href="/node/{{ node['node_id'] }}/logs" class="btn btn-outline-secondary">
+                        <i class="fas fa-times"></i> Clear
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Logs Table -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-list"></i> Log Entries</h5>
+            <button class="btn btn-sm btn-outline-secondary" onclick="location.reload()">
+                <i class="fas fa-sync-alt"></i> Refresh
+            </button>
+        </div>
+        <div class="card-body">
+            {% if logs %}
+                <div class="table-responsive">
+                    <table class="table table-dark table-hover table-sm">
+                        <thead>
+                            <tr>
+                                <th style="width: 140px;">Timestamp</th>
+                                <th style="width: 80px;">Level</th>
+                                <th style="width: 120px;">Type</th>
+                                <th>Message</th>
+                                <th style="width: 80px;">Details</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for log in logs %}
+                            <tr>
+                                <td><small>{{ log['created_at'] }}</small></td>
+                                <td>
+                                    {% if log['level'] == 'ERROR' %}
+                                        <span class="badge bg-danger">ERROR</span>
+                                    {% elif log['level'] == 'WARNING' %}
+                                        <span class="badge bg-warning text-dark">WARN</span>
+                                    {% elif log['level'] == 'INFO' %}
+                                        <span class="badge bg-info text-dark">INFO</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">{{ log['level'] }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if log['log_type'] == 'command' %}
+                                        <span class="badge bg-primary">
+                                            <i class="fas fa-terminal"></i> Command
+                                        </span>
+                                    {% elif log['log_type'] == 'file_transfer' %}
+                                        <span class="badge bg-warning">
+                                            <i class="fas fa-exchange-alt"></i> File
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">
+                                            <i class="fas fa-cog"></i> {{ log['log_type'] }}
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ log['message'] }}</td>
+                                <td>
+                                    {% if log['details'] %}
+                                        <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal"
+                                                data-bs-target="#detailsModal{{ log['id'] }}">
+                                            <i class="fas fa-info-circle"></i>
+                                        </button>
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                            </tr>
+
+                            <!-- Details Modal -->
+                            {% if log['details'] %}
+                            <div class="modal fade" id="detailsModal{{ log['id'] }}" tabindex="-1">
+                                <div class="modal-dialog modal-lg">
+                                    <div class="modal-content bg-dark-custom">
+                                        <div class="modal-header border-secondary">
+                                            <h5 class="modal-title">Log Details</h5>
+                                            <button type="button" class="btn-close btn-close-white"
+                                                    data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <p><strong>Timestamp:</strong> {{ log['created_at'] }}</p>
+                                            <p><strong>Level:</strong> {{ log['level'] }}</p>
+                                            <p><strong>Type:</strong> {{ log['log_type'] }}</p>
+                                            <p><strong>Message:</strong> {{ log['message'] }}</p>
+                                            <hr class="border-secondary">
+                                            <p><strong>Details:</strong></p>
+                                            <pre class="json-preview">{{ log['details'] }}</pre>
+                                        </div>
+                                        <div class="modal-footer border-secondary">
+                                            <button type="button" class="btn btn-secondary"
+                                                    data-bs-dismiss="modal">Close</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p class="text-muted-custom text-center py-4">
+                    <i class="fas fa-inbox fa-3x mb-3 d-block"></i>
+                    No logs found.
+                    {% if request.args.get('type') or request.args.get('level') %}
+                        <br><small>Try adjusting your filters.</small>
+                    {% endif %}
+                </p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+// Auto-refresh every 10 seconds
+setInterval(() => {
+    location.reload();
+}, 10000);
+</script>
+
+{% endblock %}

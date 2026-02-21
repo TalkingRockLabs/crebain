@@ -1,0 +1,18 @@
+[server]
+# Path to store server RNS identity file
+identity_path = ./server_identity
+
+# How often to announce server presence on RNS network (seconds)
+# Lower values = faster client discovery, higher network traffic
+announce_interval = 30
+
+[database]
+# Path to SQLite database file
+path = node_monitoring.db
+
+# Days to keep historical node status data (older data is deleted)
+retention_days = 30
+
+[logging]
+# Logging level: DEBUG, INFO, WARNING, ERROR
+level = INFO

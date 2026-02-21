@@ -1,0 +1,40 @@
+[node]
+# Unique identifier for this node (change for each client)
+node_id = node_001
+
+# Path to store RNS identity file
+identity_path = ./node_identity
+
+[server]
+# Server RNS destination hash (get this from server.py logs on first run)
+# Example: 233e592b6dc74f666251784e0e21a798
+destination = YOUR_SERVER_DESTINATION_HASH_HERE
+
+[monitoring]
+# How often to send status updates to server (seconds)
+interval = 60
+
+# Systemd services to monitor (comma-separated)
+services = sshd,systemd-resolved,NetworkManager,gpsd
+
+[rns]
+# RNS packet size limits
+packet_size_limit = 400
+link_packet_size = 1000
+link_timeout = 30
+
+[data]
+# What data to collect and send (true/false)
+collect_gps = true
+collect_services = true
+collect_storage = true
+collect_network = true
+collect_users = true
+collect_power = true
+collect_system = true
+collect_rns = true
+
+[proxy]
+# HTTP proxy server settings
+enabled = false
+port = 8080

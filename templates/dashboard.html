@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Crebain Portal{% endblock %}
+
+{% block content %}
+<nav class="navbar navbar-dark">
+    <div class="container-fluid">
+        <span class="navbar-brand mb-0 h1">
+            <img src="/static/images/crebain_logo.png" alt="Crebain" height="30" class="me-2">Crebain
+        </span>
+        <div>
+            <a href="/map" target="_blank" class="btn btn-outline-secondary btn-sm me-2">
+                <i class="fas fa-globe"></i> Map
+            </a>
+            <a href="/change-password" class="btn btn-outline-secondary btn-sm me-2">
+                <i class="fas fa-key"></i> Change Password
+            </a>
+            <a href="/logout" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-sign-out-alt"></i> Logout
+            </a>
+        </div>
+    </div>
+</nav>
+
+<div class="container-fluid mt-4">
+    <!-- Map Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-globe me-2"></i>Node Locations</h5>
+                    <a href="/map" target="_blank" class="btn btn-sm btn-outline-secondary">
+                        <i class="fas fa-expand me-1"></i> Full Screen
+                    </a>
+                </div>
+                <div class="card-body p-0">
+                    <iframe src="/map" style="width: 100%; height: 500px; border: none;"></iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Row -->
+    <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <div class="stat-number">{{ stats.total_nodes }}</div>
+                    <small class="text-muted-custom text-uppercase">Total Nodes</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <div class="stat-number">{{ stats.total_records }}</div>
+                    <small class="text-muted-custom text-uppercase">Status Records</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <div class="stat-number text-success">{{ online_count }}</div>
+                    <small class="text-muted-custom text-uppercase">Online Nodes</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <div class="stat-number text-danger">{{ offline_count }}</div>
+                    <small class="text-muted-custom text-uppercase">Offline Nodes</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Nodes Grid -->
+    <div class="row">
+        {% for node in nodes %}
+        <div class="col-lg-6 col-xl-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-server me-2"></i>{{ node.node_id }}
+                    </h5>
+                    <span class="badge badge-{{ node.status }} px-3 py-2">
+                        <i class="fas fa-circle me-1"></i>{{ node.status|upper }}
+                    </span>
+                </div>
+                
+                <div class="card-body">
+                    <div class="info-grid mb-3">
+                        <div class="border-custom border rounded p-2">
+                            <small class="text-muted-custom d-block">Last Seen</small>
+                            <span>{{ node.time_since_last_seen }} ago</span>
+                        </div>
+                        <div class="border-custom border rounded p-2">
+                            <small class="text-muted-custom d-block">Created</small>
+                            <span>{{ node.created_at[:10] if node.created_at else 'Unknown' }}</span>
+                        </div>
+                    </div>
+
+                    {% if node.power and node.power.battery %}
+                    <div class="detail-section">
+                        <div class="detail-title">
+                            <i class="fas fa-battery-three-quarters me-2"></i>Power Status
+                        </div>
+                        <div class="border-custom border rounded p-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span>Battery: {{ node.power.battery.percent }}%</span>
+                                <span class="badge {% if node.power.battery.power_plugged %}bg-success{% else %}bg-warning{% endif %}">
+                                    {% if node.power.battery.power_plugged %}
+                                        <i class="fas fa-plug me-1"></i>Charging
+                                    {% else %}
+                                        <i class="fas fa-battery-half me-1"></i>On Battery
+                                    {% endif %}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if node.system %}
+                    <div class="detail-section">
+                        <div class="detail-title">
+                            <i class="fas fa-clock me-2"></i>System Info
+                        </div>
+                        <div class="border-custom border rounded p-3">
+                            <div class="mb-2">
+                                <small class="text-muted-custom">Uptime:</small>
+                                <span class="ms-2">{{ node.system.uptime_seconds|format_uptime }}</span>
+                            </div>
+                            {% if node.system.os %}
+                            <div>
+                                <small class="text-muted-custom">OS:</small>
+                                <span class="ms-2">{{ node.system.os.system }} {{ node.system.os.release }}</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if node.storage %}
+                    <div class="detail-section">
+                        <div class="detail-title">
+                            <i class="fas fa-hdd me-2"></i>Storage
+                        </div>
+                        <div class="border-custom border rounded p-3">
+                            {% for mount, info in node.storage.items() %}
+                            <div class="d-flex justify-content-between align-items-center {% if not loop.last %}mb-2{% endif %}">
+                                <span>{{ mount }}:</span>
+                                <span class="badge {% if info.percent > 80 %}bg-danger{% elif info.percent > 60 %}bg-warning{% else %}bg-success{% endif %}">
+                                    {{ info.percent }}% used
+                                </span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if node.rns and node.rns.interfaces %}
+                    <div class="detail-section">
+                        <div class="detail-title">
+                            <i class="fas fa-network-wired me-2"></i>RNS Interfaces
+                        </div>
+                        <div class="border-custom border rounded p-3">
+                            <div class="mb-2">
+                                <small class="text-muted-custom">Configured:</small>
+                                <span class="badge bg-info ms-2">{{ node.rns.interfaces|length }}</span>
+                            </div>
+                            {% for interface in node.rns.interfaces[:3] %}
+                            <div class="d-flex justify-content-between align-items-center {% if not loop.last %}mb-1{% endif %}">
+                                <small>{{ interface.name }}:</small>
+                                <span class="badge {% if interface.online %}bg-success{% else %}bg-secondary{% endif %}">
+                                    {{ 'Online' if interface.online else 'Offline' }}
+                                </span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if node.gps %}
+                    <div class="detail-section">
+                        <div class="detail-title">
+                            <i class="fas fa-map-marker-alt me-2"></i>GPS Location
+                        </div>
+                        <div class="border-custom border rounded p-3">
+                            <div class="small">
+                                <div>Lat: {{ "%.6f"|format(node.gps.latitude) }}</div>
+                                <div>Lon: {{ "%.6f"|format(node.gps.longitude) }}</div>
+                                {% if node.gps.altitude %}
+                                <div>Alt: {{ "%.1f"|format(node.gps.altitude) }}m</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="card-footer">
+                    <a href="/node/{{ node.node_id }}" class="btn btn-primary w-100">
+                        <i class="fas fa-info-circle me-2"></i>View Details
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
